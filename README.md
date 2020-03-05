@@ -22,7 +22,7 @@ examples:
     // non-standard container?
     for ( auto const i : roam::range{ cls->get_count() } )
     {
-        auto const obj = cls->get_object( i );
+        auto& obj = cls->get_object( i );
     }
 ```
 ```
