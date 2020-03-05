@@ -46,7 +46,15 @@ examples:
     auto const r = roam::range{ 0, 10, 2 };
     for ( auto it = r.rbegin(), it_end = r.rend(); it != it_end; ++it )
     {
-        std::cout << "range test: " << *it << std::endl;
+        std::cout << *it << std::endl;
+    }
+    // output: 8, 6, 4, 2, 0
+```
+```
+    // -ve step
+    for ( auto const i = roam::range{ 8, -1, -2 } )
+    {
+        std::cout << i << std::endl;
     }
     // output: 8, 6, 4, 2, 0
 ```
