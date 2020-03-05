@@ -10,18 +10,43 @@
 #ifndef _INC_ROAM_RANGE_H_
 #define _INC_ROAM_RANGE_H_
 
-#include "platform/platformAssert.h"
-#include "roam/type_traits.h"
+#include <algorithm>   // currently for min_range utility
 
-#include <algorithm>
-#include <gsl/gsl>
+#include <cassert>
 #include <iterator>
+#include <type_traits> // for enum ctor and narrowing
 
 //-----------------------------------------------------------------------------
 
 namespace roam
 {
 
+namespace gsl
+{
+    // [gsl] narrowing
+    template < typename ty1_t, typename ty2_t >
+    [[nodiscard]] constexpr auto is_narrow( ty1_t const& a, ty2_t const& b ) -> bool
+    {   // test for narrowed conversion: 'a' and 'b' are NOT the same value
+        if ( static_cast< ty1_t >( b ) != a ) {
+            return true;
+        }
+        auto constexpr same_signedness = ( std::is_signed_v< ty1_t > == std::is_signed_v< ty2_t > );
+        if ( !same_signedness && ( a < ty1_t{} ) != ( b < ty2_t{} ) ) {
+            return true;
+        }
+        return false;
+    }
+
+    template < typename ty1_t, typename ty2_t >
+    constexpr auto narrow( ty2_t&& v ) -> ty1_t
+    {
+        auto const ret = static_cast< ty1_t >( std::forward< ty2_t >( v ) );
+        assert( !is_narrow( ret, v ) );
+        return ret;
+    }
+} // gsl
+
+// range class
 template < typename ty_t >
 class range
 {
@@ -33,18 +58,19 @@ public:
         stop_{ stop },
         step_{ step }
     {   // @example: range{ 0, 5[, 1] }
-        AssertRelease( step_ != ty_t{ 0 }, "range -- cannot have step size of 0" );
-        AssertRelease( ( start_ <= stop_ && step_ > ty_t{ 0 } ) ||
-                       ( start_ >= stop_ && step_ < ty_t{ 0 } ), "invalid range and step" );
+        // @requires: non-zero step size
+        assert( step_ != ty_t{ 0 } );
+        // @requires valid range and step
+        assert( ( start_ <= stop_ && step_ > ty_t{ 0 } ) ||
+                ( start_ >= stop_ && step_ < ty_t{ 0 } ) );
     }
     constexpr explicit range( ty_t const& stop ) : range{ ty_t{ 0 }, stop }
     {   // @example: range{ 5 }
     }
     template < typename ty2_t >
-    constexpr explicit range( ty2_t const& stop ) : range{ static_cast< ty_t >( stop ) }
+    constexpr explicit range( ty2_t const& stop ) : range{ gsl::narrow< ty_t >( stop ) }
     {   // enable implicit conversion of input type to desired
-        // @example: range< S64 >{ 10u }
-        AssertRelease( !roam::is_narrow( stop, stop_ ), "range -- narrowing error" );
+        // @example: range< int64_t >{ 10u }
     }
 
     [[nodiscard]] constexpr auto size() const -> std::size_t
@@ -65,9 +91,9 @@ public:
         // @note: range[-1] is last possible step < end (e.g. range{ 0, 5, 2 }[-1] == 4 )
         auto const idx = idx_in >= 0 ? idx_in : static_cast< std::ptrdiff_t >( size() ) + idx_in;
         auto const ret = start_ + static_cast< ty_t >( step_ * idx );
-        AssertRelease( ( ret >= start_ && ret < stop_ && step_ > ty_t{ 0 } ) ||
-                       ( ret <= start_ && ret > stop_ && step_ < ty_t{ 0 } ),
-                       avar( "range -- invalid index: %lld", idx_in ) );
+        // @requires: valid index
+        assert( ( ret >= start_ && ret < stop_ && step_ > ty_t{ 0 } ) ||
+                ( ret <= start_ && ret > stop_ && step_ < ty_t{ 0 } ) );
         return ret;
     }
 
@@ -147,10 +173,10 @@ private:
 };
 
 // construct an integral range from an enum type (using enum's underlying type)
-template < typename ty_t, typename = roam::enable_if_enum_t< ty_t > >
+template < typename ty_t, typename = std::enable_if_t< std::is_enum_v< ty_t > > >
 range( ty_t const& ) -> range< std::underlying_type_t< ty_t > >;
 
-// min range of container.size() or count
+// @utility: min range of container.size() or count
 template < typename ty_t, typename con_t >
 inline auto min_range( con_t const& c, ty_t const& count )
 {
