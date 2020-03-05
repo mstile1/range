@@ -5,14 +5,14 @@ https://docs.python.org/3/library/stdtypes.html#ranges
 
 examples:
 ```
-    // iterate with index
+    // container iteration with index
     for ( auto const i : roam::range{ vec.size() } )
     {
         std::cout << i << ": " << vec[ i ] << std::endl;
     }
 ```
 ```
-    // for n iterations
+    // iterate n
     for ( [[maybe_unused]] auto const _ : roam::range{ 32 } )
     {
         do_smth();
