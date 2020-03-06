@@ -89,8 +89,8 @@ public:
     [[nodiscard]] constexpr auto operator[]( std::ptrdiff_t const idx_in ) const -> ty_t
     {   // @return index of range, range[0] is always start
         // @note: range[-1] is last possible step < end (e.g. range{ 0, 5, 2 }[-1] == 4 )
-        auto const idx = idx_in >= 0 ? idx_in : static_cast< std::ptrdiff_t >( size() ) + idx_in;
-        auto const ret = start_ + static_cast< ty_t >( step_ * idx );
+        auto const idx = idx_in >= 0 ? idx_in : gsl::narrow< std::ptrdiff_t >( size() ) + idx_in;
+        auto const ret = start_ + gsl::narrow< ty_t >( step_ * idx );
         // @requires: valid index
         assert( ( ret >= start_ && ret < stop_ && step_ > ty_t{ 0 } ) ||
                 ( ret <= start_ && ret > stop_ && step_ < ty_t{ 0 } ) );
